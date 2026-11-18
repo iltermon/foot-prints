@@ -1,8 +1,304 @@
-/*
+/* Foot prints: sideways expanding panes */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.workspace-split.mod-root.fp-stack {
+	overflow-x: auto;
+	overflow-y: hidden;
+}
 
-If your plugin does not need CSS, delete this file.
+/* Fixed-width columns; the last one takes any spare room. */
+.workspace-split.mod-root.fp-stack > .fp-pane {
+	flex: 0 0 var(--fp-pane-width) !important;
+	width: var(--fp-pane-width);
+	min-width: var(--fp-pane-width);
+	background-color: var(--background-primary);
+}
 
-*/
+.workspace-split.mod-root.fp-stack > .fp-pane.fp-last {
+	flex-grow: 1 !important;
+}
+
+.workspace-split.mod-root.fp-stack > .fp-pane + .fp-pane {
+	border-left: var(--divider-width, 1px) solid var(--divider-color);
+}
+
+/* Columns are sized by the plugin, not dragged. */
+.workspace-split.mod-root.fp-stack > .workspace-leaf-resize-handle,
+.workspace-split.mod-root.fp-stack > .fp-pane > .workspace-leaf-resize-handle {
+	display: none;
+}
+
+/* Stacking: panes stick to the edges, leaving a spine-wide strip each. */
+.workspace-split.mod-root.fp-stack.fp-stacking > .fp-pane {
+	position: sticky;
+	left: calc(var(--fp-index) * var(--fp-spine-width));
+	right: calc((var(--fp-count) - var(--fp-index)) * var(--fp-spine-width) - var(--fp-pane-width));
+	box-shadow: -4px 0 12px -6px rgba(0, 0, 0, 0.25);
+}
+
+.fp-spine {
+	display: none;
+}
+
+.fp-stacking > .fp-pane.fp-stacked > .fp-spine {
+	display: block;
+	position: absolute;
+	inset: 0 auto 0 0;
+	width: var(--fp-spine-width);
+	z-index: var(--layer-cover, 5);
+	padding: var(--size-4-3) 0;
+	writing-mode: vertical-rl;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: var(--fp-spine-width);
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+	background-color: var(--background-secondary);
+	border-right: var(--divider-width, 1px) solid var(--divider-color);
+	cursor: pointer;
+}
+
+.fp-stacking > .fp-pane.fp-stacked > .fp-spine:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+/* ---------- Overview ---------- */
+
+.fp-overview {
+	--fp-link: 26px;
+	--fp-line: 2px solid var(--background-modifier-border-hover, var(--text-faint));
+	--fp-curve: 8px;
+	padding: var(--size-4-12) var(--size-4-8);
+	overflow: auto;
+}
+
+.fp-overview-empty {
+	color: var(--text-muted);
+	text-align: center;
+	margin-top: var(--size-4-12);
+}
+
+.fp-day {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--size-4-6);
+	margin-bottom: var(--size-4-12);
+}
+
+.fp-day-label {
+	flex: 0 0 200px;
+	text-align: right;
+	position: sticky;
+	left: 0;
+}
+
+.fp-day-weekday {
+	font-size: 2em;
+	line-height: 1.2;
+	color: var(--text-normal);
+}
+
+.fp-day-date {
+	color: var(--text-muted);
+}
+
+.fp-day-threads {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-4);
+	min-width: 0;
+}
+
+.fp-thread {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-6);
+}
+
+.fp-thread-when {
+	flex: 0 0 120px;
+	align-self: center;
+	text-align: right;
+	color: var(--text-muted);
+}
+
+.fp-thread-date {
+	font-size: 1.15em;
+}
+
+.fp-thread-time {
+	font-size: var(--font-ui-small);
+}
+
+/* Horizontal tree */
+
+.fp-tree,
+.fp-tree-node,
+.fp-tree-child {
+	display: flex;
+	align-items: center;
+}
+
+.fp-tree-children {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	margin-left: var(--fp-link);
+}
+
+.fp-tree-children::before {
+	content: "";
+	position: absolute;
+	top: 50%;
+	left: calc(-1 * var(--fp-link));
+	width: var(--fp-link);
+	border-top: var(--fp-line);
+	transform: translateY(-1px);
+}
+
+.fp-tree-child {
+	position: relative;
+	padding: var(--size-4-1) 0 var(--size-4-1) var(--fp-link);
+}
+
+.fp-tree-child::before,
+.fp-tree-child::after {
+	content: "";
+	position: absolute;
+	left: 0;
+}
+
+/* Horizontal stub into each child. */
+.fp-tree-child::before {
+	top: 50%;
+	width: var(--fp-link);
+	border-top: var(--fp-line);
+	transform: translateY(-1px);
+}
+
+/* Vertical spine joining siblings. */
+.fp-tree-child::after {
+	top: 0;
+	bottom: 0;
+	border-left: var(--fp-line);
+	transform: translateX(-1px);
+}
+
+.fp-tree-children.is-single > .fp-tree-child::after {
+	display: none;
+}
+
+/* Rounded bracket corners for the first and last branch. */
+.fp-tree-children:not(.is-single) > .fp-tree-child:first-child::before {
+	height: var(--fp-curve);
+	border-left: var(--fp-line);
+	border-top-left-radius: var(--fp-curve);
+	transform: translate(-1px, -1px);
+}
+
+.fp-tree-children:not(.is-single) > .fp-tree-child:first-child::after {
+	top: calc(50% + var(--fp-curve) - 1px);
+}
+
+.fp-tree-children:not(.is-single) > .fp-tree-child:last-child::before {
+	top: auto;
+	bottom: 50%;
+	height: var(--fp-curve);
+	border-top: none;
+	border-bottom: var(--fp-line);
+	border-left: var(--fp-line);
+	border-bottom-left-radius: var(--fp-curve);
+	transform: translate(-1px, 1px);
+}
+
+.fp-tree-children:not(.is-single) > .fp-tree-child:last-child::after {
+	bottom: calc(50% + var(--fp-curve) - 1px);
+}
+
+/* Note chips */
+
+.fp-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	flex-shrink: 0;
+	padding: var(--size-4-2) var(--size-4-3);
+	border-radius: var(--radius-s);
+	background-color: var(--background-secondary-alt, var(--background-secondary));
+	color: var(--text-normal);
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.fp-chip:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.fp-chip-icon {
+	display: inline-flex;
+	color: var(--text-muted);
+}
+
+.fp-chip-icon svg {
+	width: var(--icon-s, 16px);
+	height: var(--icon-s, 16px);
+}
+
+.fp-chip.is-missing {
+	cursor: default;
+	color: var(--text-faint);
+	text-decoration: line-through;
+}
+
+/* ---------- Folder panes ---------- */
+
+.fp-folder {
+	padding: var(--size-4-6) var(--size-4-6) var(--size-4-12);
+}
+
+.fp-folder-title {
+	margin: 0 0 var(--size-4-4);
+}
+
+.fp-folder-empty {
+	color: var(--text-muted);
+}
+
+.fp-folder-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.fp-folder-entry {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: var(--size-4-2) var(--size-4-3);
+	border-radius: var(--radius-s);
+	color: var(--text-normal);
+	cursor: pointer;
+}
+
+.fp-folder-entry:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.fp-folder-entry.is-active {
+	background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
+	color: var(--text-accent);
+}
+
+.fp-folder-entry-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.fp-folder-entry-count {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}

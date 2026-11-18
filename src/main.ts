@@ -1,99 +1,72 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
-import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
+import { debounce, Platform, Plugin, WorkspaceLeaf } from "obsidian";
+import { registerCommands } from "./commands";
+import { registerFolders } from "./folders";
+import { openTrail } from "./history/open-trail";
+import { HistoryRecorder } from "./history/recorder";
+import { HistoryData, HistoryStore } from "./history/store";
+import { FootPrintsSettings, FootPrintsSettingTab, sanitizeSettings } from "./settings";
+import { OVERVIEW_VIEW_TYPE, OverviewView } from "./ui/overview-view";
+import { installLinkInterceptor } from "./workspace/link-interceptor";
+import { PaneStack } from "./workspace/pane-stack";
 
-// Remember to rename these classes and interfaces!
+type StoredData = Partial<FootPrintsSettings> & { history?: Partial<HistoryData> };
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class FootPrintsPlugin extends Plugin {
+	settings: FootPrintsSettings;
+	history: HistoryStore;
+	recorder: HistoryRecorder;
+	private paneStack: PaneStack;
+	private requestSave = debounce(() => void this.persist(), 2000, true);
 
 	async onload() {
-		await this.loadSettings();
+		const data = (await this.loadData()) as StoredData | null;
+		this.settings = sanitizeSettings(data);
+		this.history = new HistoryStore();
+		this.history.load(data?.history, this.settings.historyDays);
+		this.registerEvent(this.history.on("changed", () => this.requestSave()));
+		this.register(() => this.requestSave.run());
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
+		this.recorder = new HistoryRecorder(this, this.history);
+		this.recorder.load();
+		this.paneStack = new PaneStack(this);
+		this.paneStack.load();
+		installLinkInterceptor(this);
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('Sample editor command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-				return false;
-			}
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			new Notice("Click");
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-
+		registerFolders(this);
+		this.registerView(OVERVIEW_VIEW_TYPE, (leaf) => new OverviewView(leaf, this));
+		this.registerHoverLinkSource(OVERVIEW_VIEW_TYPE, { display: "Foot Prints overview", defaultMod: false });
+		this.addRibbonIcon("footprints", "Open overview", () => void this.openOverview());
+		registerCommands(this);
+		this.addSettingTab(new FootPrintsSettingTab(this.app, this));
 	}
 
-	onunload() {
+	/** Phones only ever show one pane, so the sideways layout makes no sense there. */
+	isActive(): boolean {
+		return this.settings.enabled && !Platform.isPhone;
 	}
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MyPluginSettings>);
+	async updateSettings(patch: Partial<FootPrintsSettings>): Promise<void> {
+		this.settings = sanitizeSettings({ ...this.settings, ...patch });
+		this.history.prune(this.settings.historyDays);
+		await this.persist();
+		this.paneStack.refresh();
 	}
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
-
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
+	async openOverview(): Promise<void> {
+		const { workspace } = this.app;
+		const existing = workspace.getLeavesOfType(OVERVIEW_VIEW_TYPE)[0];
+		const leaf = existing ?? workspace.getLeaf("tab");
+		if (!existing) await leaf.setViewState({ type: OVERVIEW_VIEW_TYPE, active: true });
+		await workspace.revealLeaf(leaf);
+		workspace.setActiveLeaf(leaf, { focus: true });
 	}
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
+	openTrail(nodeId: string, from: WorkspaceLeaf): Promise<void> {
+		return openTrail(this, nodeId, from);
+	}
+
+	private async persist(): Promise<void> {
+		const data: StoredData = { ...this.settings, history: this.history.serialize() };
+		await this.saveData(data);
 	}
 }

@@ -1,0 +1,62 @@
+name: Release
+
+# Publishes a GitHub release (main.js, manifest.json, styles.css) for the
+# version in manifest.json. BRAT and the community catalog install from these.
+#
+# Runs when manifest.json changes on the default branch, when a version tag
+# (e.g. 1.0.0, no leading "v") is pushed, or manually. A version that already
+# has a release is skipped.
+
+on:
+    push:
+        branches: [master, main]
+        paths: [manifest.json]
+        tags: ["[0-9]+.[0-9]+.[0-9]+*"]
+    workflow_dispatch:
+
+permissions:
+    contents: write
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22.x
+                  cache: "npm"
+
+            - name: Read version
+              id: version
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  version=$(node -p "require('./manifest.json').version")
+                  echo "version=$version" >> "$GITHUB_OUTPUT"
+                  if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "$version" ]; then
+                    echo "::error::Tag $GITHUB_REF_NAME does not match manifest.json version $version"
+                    exit 1
+                  fi
+                  if gh release view "$version" >/dev/null 2>&1; then
+                    echo "Release $version already exists; nothing to do."
+                    echo "exists=true" >> "$GITHUB_OUTPUT"
+                  fi
+
+            - if: steps.version.outputs.exists != 'true'
+              run: npm ci
+
+            - if: steps.version.outputs.exists != 'true'
+              run: npm run build
+
+            - name: Publish release
+              if: steps.version.outputs.exists != 'true'
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  VERSION: ${{ steps.version.outputs.version }}
+              run: |
+                  prerelease=""
+                  case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
+                  gh release create "$VERSION" main.js manifest.json styles.css \
+                    --target "$GITHUB_SHA" --title "$VERSION" --generate-notes $prerelease
