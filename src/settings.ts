@@ -10,6 +10,8 @@ export interface FootPrintsSettings {
 	stackPanes: boolean;
 	/** Width of a collapsed pane spine, in pixels. */
 	spineWidth: number;
+	/** Selecting a folder in the file explorer opens it as a folder pane. */
+	openFoldersFromExplorer: boolean;
 	/** Keep a local history of visited notes for the overview. */
 	recordHistory: boolean;
 	/** Forget threads older than this many days (0 keeps everything). */
@@ -21,6 +23,7 @@ export const DEFAULT_SETTINGS: FootPrintsSettings = {
 	paneWidth: 700,
 	stackPanes: true,
 	spineWidth: 32,
+	openFoldersFromExplorer: true,
 	recordHistory: true,
 	historyDays: 30,
 };
@@ -39,6 +42,7 @@ export function sanitizeSettings(raw: Partial<FootPrintsSettings> | null | undef
 		paneWidth: clampNumber(s.paneWidth, LIMITS.paneWidth, DEFAULT_SETTINGS.paneWidth),
 		stackPanes: bool(s.stackPanes, DEFAULT_SETTINGS.stackPanes),
 		spineWidth: clampNumber(s.spineWidth, LIMITS.spineWidth, DEFAULT_SETTINGS.spineWidth),
+		openFoldersFromExplorer: bool(s.openFoldersFromExplorer, DEFAULT_SETTINGS.openFoldersFromExplorer),
 		recordHistory: bool(s.recordHistory, DEFAULT_SETTINGS.recordHistory),
 		historyDays: clampNumber(s.historyDays, LIMITS.historyDays, DEFAULT_SETTINGS.historyDays),
 	};
@@ -88,6 +92,15 @@ export class FootPrintsSettingTab extends PluginSettingTab {
 			`Width of a collapsed pane in pixels (${LIMITS.spineWidth.min}–${LIMITS.spineWidth.max}).`,
 			"spineWidth",
 		);
+
+		new Setting(containerEl)
+			.setName("Open folders from the file explorer")
+			.setDesc("Selecting a folder name in the file explorer also opens it as a pane listing its contents.")
+			.addToggle((t) =>
+				t.setValue(this.plugin.settings.openFoldersFromExplorer).onChange(async (v) => {
+					await this.plugin.updateSettings({ openFoldersFromExplorer: v });
+				}),
+			);
 
 		new Setting(containerEl).setName("History").setHeading();
 

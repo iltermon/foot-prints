@@ -7,6 +7,8 @@ export interface HistoryNode {
 	parentId: string | null;
 	/** Epoch milliseconds. */
 	openedAt: number;
+	/** Set for folder panes; absent for notes and other files. */
+	kind?: "folder";
 }
 
 export interface HistoryData {
@@ -44,13 +46,14 @@ export class HistoryStore extends Events {
 		return this.byId.get(id);
 	}
 
-	add(path: string, parentId: string | null): HistoryNode {
+	add(path: string, parentId: string | null, isFolder = false): HistoryNode {
 		const node: HistoryNode = {
 			id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
 			path,
 			parentId: parentId && this.byId.has(parentId) ? parentId : null,
 			openedAt: Date.now(),
 		};
+		if (isFolder) node.kind = "folder";
 		this.nodes.push(node);
 		this.byId.set(node.id, node);
 		if (this.nodes.length > MAX_NODES) this.setNodes(this.nodes.slice(-MAX_NODES));
@@ -140,6 +143,7 @@ function isNode(value: unknown): value is HistoryNode {
 		typeof n === "object" && n !== null &&
 		typeof n.id === "string" && typeof n.path === "string" &&
 		typeof n.openedAt === "number" &&
-		(n.parentId === null || typeof n.parentId === "string")
+		(n.parentId === null || typeof n.parentId === "string") &&
+		(n.kind === undefined || n.kind === "folder")
 	);
 }

@@ -250,3 +250,55 @@
 	color: var(--text-faint);
 	text-decoration: line-through;
 }
+
+/* ---------- Folder panes ---------- */
+
+.fp-folder {
+	padding: var(--size-4-6) var(--size-4-6) var(--size-4-12);
+}
+
+.fp-folder-title {
+	margin: 0 0 var(--size-4-4);
+}
+
+.fp-folder-empty {
+	color: var(--text-muted);
+}
+
+.fp-folder-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.fp-folder-entry {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: var(--size-4-2) var(--size-4-3);
+	border-radius: var(--radius-s);
+	color: var(--text-normal);
+	cursor: pointer;
+}
+
+.fp-folder-entry:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.fp-folder-entry.is-active {
+	background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
+	color: var(--text-accent);
+}
+
+.fp-folder-entry-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.fp-folder-entry-count {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}

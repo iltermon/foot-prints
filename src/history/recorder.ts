@@ -1,6 +1,6 @@
-import { TFile, WorkspaceLeaf } from "obsidian";
+import { TFile, TFolder, WorkspaceLeaf } from "obsidian";
 import type FootPrintsPlugin from "../main";
-import { filePathOf, isRootLeaf } from "../workspace/panes";
+import { filePathOf, isRootLeaf, pathOf } from "../workspace/panes";
 import { HistoryStore } from "./store";
 
 /** How long a link click waits for the resulting file-open, in milliseconds. */
@@ -27,24 +27,41 @@ export class HistoryRecorder {
 		workspace.onLayoutReady(() => {
 			// Restored panes are not new visits.
 			workspace.iterateRootLeaves((leaf) => {
-				const path = filePathOf(leaf);
+				const path = pathOf(leaf);
 				if (path) this.leafPaths.set(leaf, path);
 			});
 			this.plugin.registerEvent(workspace.on("file-open", (file) => this.onFileOpen(file)));
 		});
 	}
 
-	/** Call right before a link in `source` is opened. */
+	/** Call right before a link (or folder entry) in `source` is opened. */
 	linkFollowed(source: WorkspaceLeaf): void {
 		if (!this.plugin.settings.recordHistory) return;
-		let parentId = this.leafNodes.get(source);
-		const path = filePathOf(source);
-		if (path && (!parentId || this.store.get(parentId)?.path !== path)) {
-			// The source pane predates recording (e.g. restored on startup).
-			parentId = this.store.add(path, null).id;
-			this.assign(source, parentId, path);
-		}
+		const parentId = this.nodeFor(source);
 		this.pending = parentId ? { parentId, at: Date.now() } : null;
+	}
+
+	/** Call right before `leaf` switches to a folder pane for `path`. */
+	folderOpened(leaf: WorkspaceLeaf, path: string, parent: WorkspaceLeaf | null): void {
+		if (this.leafPaths.get(leaf) === path) return;
+		this.leafPaths.set(leaf, path);
+		this.leafNodes.delete(leaf);
+		if (!this.plugin.settings.recordHistory) return;
+		const parentId = parent ? this.nodeFor(parent) : null;
+		this.leafNodes.set(leaf, this.store.add(path, parentId, true).id);
+	}
+
+	/** The node for what `leaf` shows, creating a thread start if it has none. */
+	private nodeFor(leaf: WorkspaceLeaf): string | null {
+		const path = pathOf(leaf);
+		if (!path) return null;
+		const id = this.leafNodes.get(leaf);
+		if (id && this.store.get(id)?.path === path) return id;
+		// The pane predates recording (e.g. restored on startup).
+		const isFolder = this.plugin.app.vault.getAbstractFileByPath(path) instanceof TFolder;
+		const node = this.store.add(path, null, isFolder);
+		this.assign(leaf, node.id, path);
+		return node.id;
 	}
 
 	/** Mark `leaf` as showing an existing history node (used when reopening a trail). */

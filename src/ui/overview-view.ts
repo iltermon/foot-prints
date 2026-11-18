@@ -1,4 +1,4 @@
-import { debounce, ItemView, Keymap, setIcon, TFile, WorkspaceLeaf } from "obsidian";
+import { debounce, ItemView, Keymap, setIcon, TFile, TFolder, WorkspaceLeaf } from "obsidian";
 import type FootPrintsPlugin from "../main";
 import type { HistoryNode, HistoryTree } from "../history/store";
 
@@ -87,23 +87,26 @@ export class OverviewView extends ItemView {
 
 	private renderChip(parentEl: HTMLElement, node: HistoryNode): void {
 		const file = this.app.vault.getAbstractFileByPath(node.path);
-		const exists = file instanceof TFile;
-		const name = exists ? file.basename : basename(node.path);
+		const isFolder = node.kind === "folder";
+		const exists = isFolder ? file instanceof TFolder : file instanceof TFile;
+		const name = file instanceof TFile ? file.basename : file instanceof TFolder && !file.isRoot() ? file.name : basename(node.path);
 
 		const chip = parentEl.createDiv({ cls: "fp-chip" });
 		chip.toggleClass("is-missing", !exists);
 		chip.setAttr("aria-label", exists ? node.path : `${node.path} (deleted)`);
-		setIcon(chip.createSpan({ cls: "fp-chip-icon" }), exists ? "file-text" : "file-x");
+		const icon = isFolder ? (exists ? "folder" : "folder-x") : exists ? "file-text" : "file-x";
+		setIcon(chip.createSpan({ cls: "fp-chip-icon" }), icon);
 		chip.createSpan({ cls: "fp-chip-title", text: name });
 		if (!exists) return;
 
 		chip.addEventListener("click", (evt) => {
-			if (Keymap.isModEvent(evt)) {
+			if (file instanceof TFile && Keymap.isModEvent(evt)) {
 				void this.app.workspace.getLeaf(Keymap.isModEvent(evt)).openFile(file);
 			} else {
 				void this.plugin.openTrail(node.id, this.leaf);
 			}
 		});
+		if (isFolder) return;
 		chip.addEventListener("mouseover", (evt) => {
 			this.app.workspace.trigger("hover-link", {
 				event: evt,

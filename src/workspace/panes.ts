@@ -1,4 +1,5 @@
 import { FileView, Workspace, WorkspaceItem, WorkspaceLeaf } from "obsidian";
+import { FOLDER_VIEW_TYPE } from "../constants";
 import { containsLeaf, itemChildren, itemEl, leavesIn } from "../types";
 
 /** The columns of the main editing area, left to right. */
@@ -17,6 +18,17 @@ export function isRootLeaf(workspace: Workspace, leaf: WorkspaceLeaf): boolean {
 
 export function filePathOf(leaf: WorkspaceLeaf | null): string | null {
 	return leaf?.view instanceof FileView ? leaf.view.file?.path ?? null : null;
+}
+
+/** The file or folder a leaf shows (folder panes included, even while deferred). */
+export function pathOf(leaf: WorkspaceLeaf | null): string | null {
+	if (!leaf) return null;
+	const file = filePathOf(leaf);
+	if (file) return file;
+	const state = leaf.getViewState();
+	if (state.type !== FOLDER_VIEW_TYPE) return null;
+	const path = (state.state as { path?: unknown } | undefined)?.path;
+	return typeof path === "string" ? path : null;
 }
 
 /** Close every pane to the right of the pane at `index`. */

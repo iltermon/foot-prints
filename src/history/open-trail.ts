@@ -1,4 +1,5 @@
-import { Notice, TFile, WorkspaceLeaf } from "obsidian";
+import { Notice, TFile, TFolder, WorkspaceLeaf } from "obsidian";
+import { showFolder } from "../folders/show-folder";
 import type FootPrintsPlugin from "../main";
 import { isRootLeaf } from "../workspace/panes";
 
@@ -10,10 +11,10 @@ export async function openTrail(plugin: FootPrintsPlugin, nodeId: string, from: 
 	const { workspace, vault } = plugin.app;
 	const steps = plugin.history.trail(nodeId).flatMap((node) => {
 		const file = vault.getAbstractFileByPath(node.path);
-		return file instanceof TFile ? [{ node, file }] : [];
+		return file instanceof TFile || file instanceof TFolder ? [{ node, file }] : [];
 	});
 	if (steps.length === 0) {
-		new Notice("That note no longer exists.");
+		new Notice("That note or folder no longer exists.");
 		return;
 	}
 
@@ -27,9 +28,10 @@ export async function openTrail(plugin: FootPrintsPlugin, nodeId: string, from: 
 	let leaf = anchor;
 	for (const [i, { node, file }] of steps.entries()) {
 		if (i > 0) leaf = workspace.createLeafBySplit(leaf, "vertical");
-		// Register before opening so the file-open isn't recorded as a new visit.
+		// Register before opening so this isn't recorded as a new visit.
 		plugin.recorder.assign(leaf, node.id, file.path);
-		await leaf.openFile(file);
+		if (file instanceof TFile) await leaf.openFile(file);
+		else await showFolder(plugin, leaf, file.path, null);
 	}
 	workspace.setActiveLeaf(leaf, { focus: true });
 }

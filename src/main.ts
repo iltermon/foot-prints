@@ -1,5 +1,6 @@
 import { debounce, Platform, Plugin, WorkspaceLeaf } from "obsidian";
 import { registerCommands } from "./commands";
+import { registerFolders } from "./folders";
 import { openTrail } from "./history/open-trail";
 import { HistoryRecorder } from "./history/recorder";
 import { HistoryData, HistoryStore } from "./history/store";
@@ -31,6 +32,7 @@ export default class FootPrintsPlugin extends Plugin {
 		this.paneStack.load();
 		installLinkInterceptor(this);
 
+		registerFolders(this);
 		this.registerView(OVERVIEW_VIEW_TYPE, (leaf) => new OverviewView(leaf, this));
 		this.registerHoverLinkSource(OVERVIEW_VIEW_TYPE, { display: "Foot Prints overview", defaultMod: false });
 		this.addRibbonIcon("footprints", "Open overview", () => void this.openOverview());
