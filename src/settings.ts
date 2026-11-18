@@ -10,6 +10,10 @@ export interface FootPrintsSettings {
 	stackPanes: boolean;
 	/** Width of a collapsed pane spine, in pixels. */
 	spineWidth: number;
+	/** Keep a local history of visited notes for the overview. */
+	recordHistory: boolean;
+	/** Forget threads older than this many days (0 keeps everything). */
+	historyDays: number;
 }
 
 export const DEFAULT_SETTINGS: FootPrintsSettings = {
@@ -17,20 +21,27 @@ export const DEFAULT_SETTINGS: FootPrintsSettings = {
 	paneWidth: 700,
 	stackPanes: true,
 	spineWidth: 32,
+	recordHistory: true,
+	historyDays: 30,
 };
 
 const LIMITS = {
 	paneWidth: { min: 300, max: 2000 },
 	spineWidth: { min: 16, max: 80 },
+	historyDays: { min: 0, max: 3650 },
 };
 
-export function sanitizeSettings(raw: Partial<FootPrintsSettings> | null): FootPrintsSettings {
-	const s = Object.assign({}, DEFAULT_SETTINGS, raw ?? {});
-	s.paneWidth = clampNumber(s.paneWidth, LIMITS.paneWidth, DEFAULT_SETTINGS.paneWidth);
-	s.spineWidth = clampNumber(s.spineWidth, LIMITS.spineWidth, DEFAULT_SETTINGS.spineWidth);
-	s.enabled = Boolean(s.enabled);
-	s.stackPanes = Boolean(s.stackPanes);
-	return s;
+export function sanitizeSettings(raw: Partial<FootPrintsSettings> | null | undefined): FootPrintsSettings {
+	const s = { ...DEFAULT_SETTINGS, ...(raw ?? {}) };
+	const bool = (v: unknown, fallback: boolean) => (typeof v === "boolean" ? v : fallback);
+	return {
+		enabled: bool(s.enabled, DEFAULT_SETTINGS.enabled),
+		paneWidth: clampNumber(s.paneWidth, LIMITS.paneWidth, DEFAULT_SETTINGS.paneWidth),
+		stackPanes: bool(s.stackPanes, DEFAULT_SETTINGS.stackPanes),
+		spineWidth: clampNumber(s.spineWidth, LIMITS.spineWidth, DEFAULT_SETTINGS.spineWidth),
+		recordHistory: bool(s.recordHistory, DEFAULT_SETTINGS.recordHistory),
+		historyDays: clampNumber(s.historyDays, LIMITS.historyDays, DEFAULT_SETTINGS.historyDays),
+	};
 }
 
 function clampNumber(value: unknown, range: { min: number; max: number }, fallback: number): number {
@@ -77,9 +88,35 @@ export class FootPrintsSettingTab extends PluginSettingTab {
 			`Width of a collapsed pane in pixels (${LIMITS.spineWidth.min}–${LIMITS.spineWidth.max}).`,
 			"spineWidth",
 		);
+
+		new Setting(containerEl).setName("History").setHeading();
+
+		new Setting(containerEl)
+			.setName("Record history")
+			.setDesc("Remember which notes you open and the links you follow, for the overview. Stored only in this vault's plugin data.")
+			.addToggle((t) =>
+				t.setValue(this.plugin.settings.recordHistory).onChange(async (v) => {
+					await this.plugin.updateSettings({ recordHistory: v });
+				}),
+			);
+
+		this.numberSetting(
+			"Keep history for",
+			"Days to keep threads in the overview. Set to 0 to keep them forever.",
+			"historyDays",
+		);
+
+		new Setting(containerEl)
+			.setName("Clear history")
+			.setDesc("Remove every thread from the overview.")
+			.addButton((b) =>
+				b.setButtonText("Clear").setWarning().onClick(() => {
+					this.plugin.history.clear();
+				}),
+			);
 	}
 
-	private numberSetting(name: string, desc: string, key: "paneWidth" | "spineWidth"): void {
+	private numberSetting(name: string, desc: string, key: "paneWidth" | "spineWidth" | "historyDays"): void {
 		new Setting(this.containerEl)
 			.setName(name)
 			.setDesc(desc)

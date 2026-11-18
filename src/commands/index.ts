@@ -20,6 +20,12 @@ export function registerCommands(plugin: FootPrintsPlugin): void {
 	};
 
 	plugin.addCommand({
+		id: "open-overview",
+		name: "Open overview",
+		callback: () => void plugin.openOverview(),
+	});
+
+	plugin.addCommand({
 		id: "toggle-sideways-panes",
 		name: "Toggle sideways panes",
 		callback: async () => {

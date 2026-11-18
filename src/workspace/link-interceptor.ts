@@ -1,4 +1,4 @@
-import { getLinkpath, OpenViewState, PaneType, Workspace } from "obsidian";
+import { getLinkpath, OpenViewState, PaneType, Workspace, WorkspaceLeaf } from "obsidian";
 import type FootPrintsPlugin from "../main";
 import { visibleLeaf } from "../types";
 import { closePanesAfter, filePathOf, isRootLeaf, paneIndexOf, rootPanes } from "./panes";
@@ -23,9 +23,11 @@ export function installLinkInterceptor(plugin: FootPrintsPlugin): void {
 		state?: OpenViewState,
 	) {
 		const openHere = (): Promise<void> => original.call(this, linktext, sourcePath, false, state);
+		const source = sourceLeaf(plugin, sourcePath);
+		if (source) plugin.recorder.linkFollowed(source);
 		if (plugin.isActive() && !newLeaf) {
 			try {
-				if (await openSideways(plugin, linktext, sourcePath, openHere)) return;
+				if (source && (await openSideways(plugin, source, linktext, sourcePath, openHere))) return;
 			} catch (err) {
 				console.error("Foot prints: falling back to default link opening", err);
 			}
@@ -39,18 +41,25 @@ export function installLinkInterceptor(plugin: FootPrintsPlugin): void {
 	});
 }
 
+/**
+ * The main-area leaf a link was clicked in, or null for links from the sidebar,
+ * hover popovers, etc. (those keep their default behavior).
+ */
+function sourceLeaf(plugin: FootPrintsPlugin, sourcePath: string): WorkspaceLeaf | null {
+	const { workspace } = plugin.app;
+	const leaf = workspace.getMostRecentLeaf(workspace.rootSplit);
+	if (!leaf || !isRootLeaf(workspace, leaf) || filePathOf(leaf) !== sourcePath) return null;
+	return leaf;
+}
+
 async function openSideways(
 	plugin: FootPrintsPlugin,
+	source: WorkspaceLeaf,
 	linktext: string,
 	sourcePath: string,
 	openInActiveLeaf: () => Promise<void>,
 ): Promise<boolean> {
 	const { workspace, metadataCache } = plugin.app;
-
-	// Only handle links clicked inside a note in the main area. Links from the
-	// sidebar, hover popovers, etc. keep their default behavior.
-	const source = workspace.getMostRecentLeaf(workspace.rootSplit);
-	if (!source || !isRootLeaf(workspace, source) || filePathOf(source) !== sourcePath) return false;
 
 	const index = paneIndexOf(workspace, source);
 	if (index < 0) return false;
