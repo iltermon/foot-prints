@@ -6,6 +6,8 @@ export interface FootPrintsSettings {
 	enabled: boolean;
 	/** Width of each pane, in pixels. */
 	paneWidth: number;
+	/** Most panes kept open; opening another closes the leftmost (0 = no limit). */
+	maxPanes: number;
 	/** Collapse panes that scroll off-screen into narrow title spines. */
 	stackPanes: boolean;
 	/** Width of a collapsed pane spine, in pixels. */
@@ -21,6 +23,7 @@ export interface FootPrintsSettings {
 export const DEFAULT_SETTINGS: FootPrintsSettings = {
 	enabled: true,
 	paneWidth: 700,
+	maxPanes: 3,
 	stackPanes: true,
 	spineWidth: 32,
 	openFoldersFromExplorer: true,
@@ -30,6 +33,7 @@ export const DEFAULT_SETTINGS: FootPrintsSettings = {
 
 const LIMITS = {
 	paneWidth: { min: 300, max: 2000 },
+	maxPanes: { min: 0, max: 50 },
 	spineWidth: { min: 16, max: 80 },
 	historyDays: { min: 0, max: 3650 },
 };
@@ -40,6 +44,7 @@ export function sanitizeSettings(raw: Partial<FootPrintsSettings> | null | undef
 	return {
 		enabled: bool(s.enabled, DEFAULT_SETTINGS.enabled),
 		paneWidth: clampNumber(s.paneWidth, LIMITS.paneWidth, DEFAULT_SETTINGS.paneWidth),
+		maxPanes: clampNumber(s.maxPanes, LIMITS.maxPanes, DEFAULT_SETTINGS.maxPanes),
 		stackPanes: bool(s.stackPanes, DEFAULT_SETTINGS.stackPanes),
 		spineWidth: clampNumber(s.spineWidth, LIMITS.spineWidth, DEFAULT_SETTINGS.spineWidth),
 		openFoldersFromExplorer: bool(s.openFoldersFromExplorer, DEFAULT_SETTINGS.openFoldersFromExplorer),
@@ -76,6 +81,12 @@ export class FootPrintsSettingTab extends PluginSettingTab {
 			"Pane width",
 			`Width of each pane in pixels (${LIMITS.paneWidth.min}–${LIMITS.paneWidth.max}).`,
 			"paneWidth",
+		);
+
+		this.numberSetting(
+			"Maximum panes",
+			"Most panes kept open. Opening another closes the leftmost one. Set to 0 for no limit.",
+			"maxPanes",
 		);
 
 		new Setting(containerEl)
@@ -129,7 +140,7 @@ export class FootPrintsSettingTab extends PluginSettingTab {
 			);
 	}
 
-	private numberSetting(name: string, desc: string, key: "paneWidth" | "spineWidth" | "historyDays"): void {
+	private numberSetting(name: string, desc: string, key: "paneWidth" | "maxPanes" | "spineWidth" | "historyDays"): void {
 		new Setting(this.containerEl)
 			.setName(name)
 			.setDesc(desc)

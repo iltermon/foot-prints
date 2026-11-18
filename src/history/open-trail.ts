@@ -1,7 +1,7 @@
 import { Notice, TFile, TFolder, WorkspaceLeaf } from "obsidian";
 import { showFolder } from "../folders/show-folder";
 import type FootPrintsPlugin from "../main";
-import { isRootLeaf } from "../workspace/panes";
+import { enforcePaneLimit, isRootLeaf } from "../workspace/panes";
 
 /**
  * Replace the main area with the thread leading to `nodeId`: its root on the
@@ -25,8 +25,12 @@ export async function openTrail(plugin: FootPrintsPlugin, nodeId: string, from: 
 	});
 	others.forEach((leaf) => leaf.detach());
 
+	// Only the end of a long trail fits within the pane limit.
+	const max = plugin.isActive() ? plugin.settings.maxPanes : 0;
+	const shown = max > 0 ? steps.slice(-max) : steps;
+
 	let leaf = anchor;
-	for (const [i, { node, file }] of steps.entries()) {
+	for (const [i, { node, file }] of shown.entries()) {
 		if (i > 0) leaf = workspace.createLeafBySplit(leaf, "vertical");
 		// Register before opening so this isn't recorded as a new visit.
 		plugin.recorder.assign(leaf, node.id, file.path);
@@ -34,4 +38,5 @@ export async function openTrail(plugin: FootPrintsPlugin, nodeId: string, from: 
 		else await showFolder(plugin, leaf, file.path, null);
 	}
 	workspace.setActiveLeaf(leaf, { focus: true });
+	if (plugin.isActive()) enforcePaneLimit(workspace, max);
 }

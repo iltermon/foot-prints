@@ -1,7 +1,7 @@
 import { WorkspaceLeaf } from "obsidian";
 import type FootPrintsPlugin from "../main";
 import { visibleLeaf } from "../types";
-import { closePanesAfter, isRootLeaf, paneIndexOf, pathOf, rootPanes } from "./panes";
+import { closePanesAfter, enforcePaneLimit, isRootLeaf, paneIndexOf, pathOf, rootPanes } from "./panes";
 
 /**
  * Show `path` in the pane right of `source`, closing panes beyond it. If the
@@ -33,4 +33,5 @@ export async function openBeside(
 	const leaf = workspace.createLeafBySplit(source, "vertical");
 	workspace.setActiveLeaf(leaf, { focus: true });
 	await open(leaf);
+	enforcePaneLimit(workspace, plugin.settings.maxPanes);
 }

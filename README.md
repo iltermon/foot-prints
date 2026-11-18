@@ -7,6 +7,7 @@ An Obsidian plugin that brings [Tangent](https://www.tangentnotes.com)-style bro
 Select a link in a note and the linked note opens in a **new pane to the right**. Any panes further right are closed, so the row of panes is always the trail of links you followed, like a thread.
 
 - The main area scrolls sideways, and every pane has a fixed width.
+- At most 3 panes stay open by default. Opening a fourth closes the leftmost one. You can change the limit in settings.
 - Panes that scroll off either edge collapse into narrow **spines** that show the note title. Select a spine to bring its pane back.
 - If the link points to the note that is already open in the next pane, that pane is focused instead of reopened.
 - Modifier-clicks (new tab, split, new window) work as they normally do in Obsidian.
@@ -44,6 +45,7 @@ There are three ways to open a folder as a pane:
 
 - **Sideways panes**: turn the sideways layout on or off.
 - **Pane width**: the width of each pane in pixels.
+- **Maximum panes**: the most panes kept open, 3 by default. Opening another closes the leftmost one. Set to 0 for no limit.
 - **Stack panes** and **Spine width**: whether off-screen panes collapse into spines, and how wide the spines are.
 - **Open folders from the file explorer**: whether selecting a folder in the file explorer opens it as a pane.
 - **Record history**, **Keep history for**, **Clear history**: control the overview's history.

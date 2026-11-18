@@ -31,6 +31,14 @@ export function pathOf(leaf: WorkspaceLeaf | null): string | null {
 	return typeof path === "string" ? path : null;
 }
 
+/** Close the leftmost panes until at most `max` remain (0 = no limit). */
+export function enforcePaneLimit(workspace: Workspace, max: number): void {
+	if (max <= 0) return;
+	const panes = rootPanes(workspace);
+	const doomed = panes.slice(0, Math.max(0, panes.length - max)).flatMap(leavesIn);
+	for (const leaf of doomed) leaf.detach();
+}
+
 /** Close every pane to the right of the pane at `index`. */
 export function closePanesAfter(workspace: Workspace, index: number): void {
 	const doomed = rootPanes(workspace).slice(index + 1).flatMap(leavesIn);

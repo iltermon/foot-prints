@@ -1,7 +1,7 @@
 import { getLinkpath, OpenViewState, PaneType, Workspace, WorkspaceLeaf } from "obsidian";
 import type FootPrintsPlugin from "../main";
 import { visibleLeaf } from "../types";
-import { closePanesAfter, filePathOf, isRootLeaf, paneIndexOf, rootPanes } from "./panes";
+import { closePanesAfter, enforcePaneLimit, filePathOf, isRootLeaf, paneIndexOf, rootPanes } from "./panes";
 
 type OpenLinkText = Workspace["openLinkText"];
 
@@ -84,5 +84,6 @@ async function openSideways(
 	// Let Obsidian do the actual opening in the (now active) leaf, so headings,
 	// block refs and "create note from unresolved link" all keep working.
 	await openInActiveLeaf();
+	enforcePaneLimit(workspace, plugin.settings.maxPanes);
 	return true;
 }
