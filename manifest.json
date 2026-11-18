@@ -1,7 +1,7 @@
 {
 	"id": "foot-prints",
 	"name": "Foot Prints",
-	"version": "1.1.0",
+	"version": "1.0.1",
 	"minAppVersion": "1.0.0",
 	"description": "Open linked notes side by side in a sideways expanding stack of panes, inspired by Tangent.",
 	"author": "iltermon",
