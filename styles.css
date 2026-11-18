@@ -1,8 +1,64 @@
-/*
+/* Foot prints: sideways expanding panes */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.workspace-split.mod-root.fp-stack {
+	overflow-x: auto;
+	overflow-y: hidden;
+}
 
-If your plugin does not need CSS, delete this file.
+/* Fixed-width columns; the last one takes any spare room. */
+.workspace-split.mod-root.fp-stack > .fp-pane {
+	flex: 0 0 var(--fp-pane-width) !important;
+	width: var(--fp-pane-width);
+	min-width: var(--fp-pane-width);
+	background-color: var(--background-primary);
+}
 
-*/
+.workspace-split.mod-root.fp-stack > .fp-pane.fp-last {
+	flex-grow: 1 !important;
+}
+
+.workspace-split.mod-root.fp-stack > .fp-pane + .fp-pane {
+	border-left: var(--divider-width, 1px) solid var(--divider-color);
+}
+
+/* Columns are sized by the plugin, not dragged. */
+.workspace-split.mod-root.fp-stack > .workspace-leaf-resize-handle,
+.workspace-split.mod-root.fp-stack > .fp-pane > .workspace-leaf-resize-handle {
+	display: none;
+}
+
+/* Stacking: panes stick to the edges, leaving a spine-wide strip each. */
+.workspace-split.mod-root.fp-stack.fp-stacking > .fp-pane {
+	position: sticky;
+	left: calc(var(--fp-index) * var(--fp-spine-width));
+	right: calc((var(--fp-count) - var(--fp-index)) * var(--fp-spine-width) - var(--fp-pane-width));
+	box-shadow: -4px 0 12px -6px rgba(0, 0, 0, 0.25);
+}
+
+.fp-spine {
+	display: none;
+}
+
+.fp-stacking > .fp-pane.fp-stacked > .fp-spine {
+	display: block;
+	position: absolute;
+	inset: 0 auto 0 0;
+	width: var(--fp-spine-width);
+	z-index: var(--layer-cover, 5);
+	padding: var(--size-4-3) 0;
+	writing-mode: vertical-rl;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: var(--fp-spine-width);
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+	background-color: var(--background-secondary);
+	border-right: var(--divider-width, 1px) solid var(--divider-color);
+	cursor: pointer;
+}
+
+.fp-stacking > .fp-pane.fp-stacked > .fp-spine:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
