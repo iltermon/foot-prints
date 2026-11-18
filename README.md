@@ -67,8 +67,10 @@ Download `main.js`, `manifest.json` and `styles.css` from the [latest release](h
 ## Releasing
 
 1. Bump the version with `npm version patch` (or `minor` or `major`). This updates `manifest.json` and `versions.json`.
-2. Push a tag that matches the version exactly, with no leading `v`, for example `git tag 1.0.1 && git push origin 1.0.1`.
-3. The **Release** workflow builds the plugin and publishes a GitHub release with the three files attached. A tag with a suffix, like `1.1.0-beta.1`, is published as a pre-release.
+2. Merge the change into `master`.
+3. The **Release** workflow sees the new version, builds the plugin, and publishes a GitHub release tagged with that version. The three files are attached to it.
+
+You can also start the workflow by pushing a matching tag (for example `1.0.1`, with no leading `v`). Or run it manually from the **Actions** tab. A version with a suffix, like `1.1.0-beta.1`, is published as a pre-release.
 
 ## Development
 
