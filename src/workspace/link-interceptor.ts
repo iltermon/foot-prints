@@ -24,15 +24,20 @@ export function installLinkInterceptor(plugin: FootPrintsPlugin): void {
 	) {
 		const openHere = (): Promise<void> => original.call(this, linktext, sourcePath, false, state);
 		const source = sourceLeaf(plugin, sourcePath);
-		if (source) plugin.recorder.linkFollowed(source);
-		if (plugin.isActive() && !newLeaf) {
-			try {
-				if (source && (await openSideways(plugin, source, linktext, sourcePath, openHere))) return;
-			} catch (err) {
-				console.error("Foot prints: falling back to default link opening", err);
+		if (!source) return original.call(this, linktext, sourcePath, newLeaf, state);
+		plugin.recorder.linkFollowed(source);
+		try {
+			if (plugin.isActive() && !newLeaf) {
+				try {
+					if (await openSideways(plugin, source, linktext, sourcePath, openHere)) return;
+				} catch (err) {
+					console.error("Foot prints: falling back to default link opening", err);
+				}
 			}
+			return await original.call(this, linktext, sourcePath, newLeaf, state);
+		} finally {
+			plugin.recorder.linkSettled();
 		}
-		return original.call(this, linktext, sourcePath, newLeaf, state);
 	};
 
 	workspace.openLinkText = patched;

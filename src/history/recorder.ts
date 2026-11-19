@@ -41,6 +41,35 @@ export class HistoryRecorder {
 		this.pending = parentId ? { parentId, at: Date.now() } : null;
 	}
 
+	/**
+	 * Call once the open started by `linkFollowed` has finished. Makes sure the
+	 * note it landed on is recorded as a child of the link's source, even when
+	 * Obsidian's events didn't line up (e.g. a note created from an unresolved
+	 * link, whose file-open can fire before its pane shows the file).
+	 */
+	linkSettled(): void {
+		const pending = this.pending;
+		this.pending = null;
+		if (!pending || !this.plugin.settings.recordHistory) return;
+
+		const { workspace } = this.plugin.app;
+		const leaf = workspace.getMostRecentLeaf(workspace.rootSplit);
+		const path = filePathOf(leaf);
+		if (!leaf || !path || !isRootLeaf(workspace, leaf)) return;
+
+		const id = this.leafNodes.get(leaf);
+		const node = id ? this.store.get(id) : undefined;
+		if (node?.path === path) {
+			// Recorded during this open, but as a thread start.
+			if (node.parentId === null && node.openedAt >= pending.at && node.id !== pending.parentId) {
+				this.store.setParent(node.id, pending.parentId);
+			}
+			return;
+		}
+		this.leafPaths.set(leaf, path);
+		this.leafNodes.set(leaf, this.store.add(path, pending.parentId).id);
+	}
+
 	/** Call right before `leaf` switches to a folder pane for `path`. */
 	folderOpened(leaf: WorkspaceLeaf, path: string, parent: WorkspaceLeaf | null): void {
 		if (this.leafPaths.get(leaf) === path) return;
@@ -72,8 +101,7 @@ export class HistoryRecorder {
 
 	private onFileOpen(file: TFile | null): void {
 		const { workspace } = this.plugin.app;
-		const pending = this.pending && Date.now() - this.pending.at < LINK_WINDOW_MS ? this.pending : null;
-		this.pending = null;
+		if (this.pending && Date.now() - this.pending.at >= LINK_WINDOW_MS) this.pending = null;
 		if (!file) return;
 
 		const leaf = workspace.getMostRecentLeaf(workspace.rootSplit);
@@ -82,7 +110,10 @@ export class HistoryRecorder {
 		this.leafPaths.set(leaf, file.path);
 
 		if (!this.plugin.settings.recordHistory) return;
-		const node = this.store.add(file.path, pending?.parentId ?? null);
+		// Only a recorded visit uses up the pending link, so unrelated events
+		// (an empty pane gaining focus, a view still loading) can't swallow it.
+		const node = this.store.add(file.path, this.pending?.parentId ?? null);
+		this.pending = null;
 		this.leafNodes.set(leaf, node.id);
 	}
 }

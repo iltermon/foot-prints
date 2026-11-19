@@ -132,7 +132,11 @@ export class FolderView extends ItemView {
 			await openBeside(plugin, this.leaf, entry.path, (leaf) => showFolder(plugin, leaf, entry.path, this.leaf));
 		} else if (entry instanceof TFile) {
 			plugin.recorder.linkFollowed(this.leaf);
-			await openBeside(plugin, this.leaf, entry.path, (leaf) => leaf.openFile(entry));
+			try {
+				await openBeside(plugin, this.leaf, entry.path, (leaf) => leaf.openFile(entry));
+			} finally {
+				plugin.recorder.linkSettled();
+			}
 		}
 	}
 

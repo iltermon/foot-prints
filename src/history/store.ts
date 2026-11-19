@@ -61,6 +61,14 @@ export class HistoryStore extends Events {
 		return node;
 	}
 
+	/** Attach `id` under `parentId` (ignored if that would form a cycle). */
+	setParent(id: string, parentId: string): void {
+		const node = this.byId.get(id);
+		if (!node || !this.byId.has(parentId) || this.trail(parentId).some((n) => n.id === id)) return;
+		node.parentId = parentId;
+		this.trigger("changed");
+	}
+
 	/** Root → … → node. */
 	trail(id: string): HistoryNode[] {
 		const trail: HistoryNode[] = [];
